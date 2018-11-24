@@ -31,6 +31,6 @@ def format_hex(hex):
 message = "AA AA 01 00 00 01 00 00 00 00 00 00 " \
 "06 67 6f 6f 67 6c 65 03 63 6f 6d 00 00 01 00 01"
 
-response = send_udp_message(message, "172.27.141.254", 53)
+response = send_udp_message(message, "192.168.0.42", 53)
 print(format_hex(response))
 
