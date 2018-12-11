@@ -1,6 +1,4 @@
 
-#class Message:
-
 def encodeName(name):
     domainList = name.split('.')
     encodedName = b''
@@ -12,6 +10,22 @@ def encodeName(name):
     encodedName += (0).to_bytes(1, 'big')
 
     return encodedName
+
+def decodeName(b):
+    name = ""
+    nameLength = 0
+    i = 0
+
+    while b[i:i+1].hex() != '00':
+        length = int(b[i:i+1].hex(), 16)
+        for j in range(length):
+            name += str(b[i+1+j:i+2+j], 'ascii')
+        nameLength += length + 1
+        i += length + 1
+        if b[i:i+1].hex() != '00':
+            name += '.'
+
+    return name, nameLength + 1
 
 def getType(type):
     if type == 1:
@@ -84,10 +98,10 @@ class Header:
         self.nscount = nscount
         self.arcount = arcount
 
-    def getMessage(self):
+    def getBytes(self):
         msg = bytes.fromhex(self.id)
-        msg += ((self.qr << 6) + (self.opcode << 3) + (self.aa << 2) + (self.tc << 1) + self.rd).to_bytes(1, 'big')
-        msg += ((self.ra << 6) + (self.z << 4) + self.rcode).to_bytes(1, 'big')
+        msg += ((self.qr << 7) + (self.opcode << 3) + (self.aa << 2) + (self.tc << 1) + self.rd).to_bytes(1, 'big')
+        msg += ((self.ra << 7) + (self.z << 4) + self.rcode).to_bytes(1, 'big')
         msg += self.qdcount.to_bytes(2, 'big')
         msg += self.ancount.to_bytes(2, 'big')
         msg += self.nscount.to_bytes(2, 'big')
@@ -99,7 +113,7 @@ class Header:
         if self.opcode == 0:
             return 'QUERY'
         elif self.opcode == 1:
-            return 'IQUERY':
+            return 'IQUERY'
         elif self.opcode == 2:
             return 'STATUS'
         elif self.opcode <= 15:
@@ -123,7 +137,7 @@ class Header:
 
     def __str__(self):
         string = "* Header *\n"
-        string += "ID : " + self.id
+        string += "ID : " + self.id.upper()
         string += "\nQr : " + str(self.qr) + "\t\tOpcode : " + str(bool(self.opcode)) + "\t\tAa : " + str(bool(self.aa)) + "\t\tTc : " + str(bool(self.tc)) + "\t\tRd : " + str(bool(self.rd))
         string += "\nRa : " + str(bool(self.ra)) + "\t\tZ : " + str(self.z) + "\t\tRcode : " + str(self.rcode)
         string += "\nQdcount : " + str(self.qdcount)
@@ -140,7 +154,7 @@ class Question:
         self.qtype = qtype
         self.qclass = qclass
 
-    def getMessage(self):
+    def getBytes(self):
         msg = encodeName(self.qname)
         msg += self.qtype.to_bytes(2, 'big')
         msg += self.qclass.to_bytes(2, 'big')
@@ -164,7 +178,7 @@ class RR:
         self.ttl = ttl
         self.rdata = rdata
 
-    def getMessage(self):
+    def getBytes(self):
         msg = encodeName(self.name)
         msg += self.type.to_bytes(2, 'big')
         msg += self.classe.to_bytes(2, 'big')
@@ -172,10 +186,121 @@ class RR:
         msg += len(self.rdata).to_bytes(2, 'big')
         msg += self.rdata
 
+        return msg
+
     def __str__(self):
         string = "* Resource Record *\n"
         string += "Domain name : " + self.name
         string += "\nType : " + getType(self.type)
         string += "\nClass : " + getClass(self.classe)
         string += "\nTTL : " + str(self.ttl)
-        string += "Raw data : " + self.rdata
+        string += "\nRaw data : " + self.rdata.hex().upper()
+
+        return string
+
+
+class Message:
+
+    def __init__(self, header, qList = [], rrList = []):
+        self.header = header
+        self.qList = qList
+        self.rrList = rrList
+
+    def getBytes(self):
+        msg = self.header.getBytes()
+        for q in self.qList:
+            msg += q.getBytes()
+        for rr in self.rrList:
+            msg += rr.getBytes()
+
+        return msg
+
+    def getAnswer(self):
+        if self.header.ancount > 0:
+            return self.rrList[:self.header.ancount]
+        else:
+            return []
+
+    def getAuthority(self):
+        if self.header.nscount > 0:
+            return self.rrList[self.header.ancount:(self.header.ancount + self.header.nscount)]
+        else:
+            return []
+
+    def getAdditional(self):
+        if self.header.arcount > 0:
+            return self.rrList[(self.header.ancount + self.header.nscount):(self.header.ancount + self.header.nscount + self.header.arcount)]
+        else:
+            return []
+
+    def __str__(self):
+        string = "==============================\n\n"
+        string += str(self.header)
+        for i in range(self.header.qdcount):
+            string += "\n\n" + str(i+1) + "\t"
+            string += str(self.qList[i])
+        answer = self.getAnswer()
+        for i in range(self.header.ancount):
+            string += "\n\n" + str(i+1) + "\t"
+            string += str(answer[i])
+        authority = self.getAuthority()
+        for i in range(self.header.nscount):
+            string += "\n\n" + str(i+1) + "\t"
+            string += str(authority[i])
+        additional = self.getAdditional()
+        for i in range(self.header.arcount):
+            string += "\n\n" + str(i+1) + "\t"
+            string += str(additional[i])
+
+        return string
+
+def bytesToHeader(b):
+    return Header(
+        b[:2].hex(),
+        int(b[2:3].hex(), 16) >> 7,
+        (int(b[2:3].hex(), 16) >> 3) % 16,
+        (int(b[2:3].hex(), 16) >> 2) % 2,
+        (int(b[2:3].hex(), 16) >> 1) % 2,
+        int(b[2:3].hex(), 16) % 2,
+        (int(b[3:4].hex(), 16) >> 7) % 2,
+        (int(b[3:4].hex(), 16) >> 4) % 8,
+        int(b[3:4].hex(), 16) % 16,
+        int(b[4:6].hex(), 16),
+        int(b[6:8].hex(), 16),
+        int(b[8:10].hex(), 16),
+        int(b[10:].hex(), 16)
+    )
+
+def bytesToQuestion(b):
+    name, nameLength = decodeName(b)
+    return Question(
+        name,
+        int(b[nameLength:nameLength + 2].hex(), 16),
+        int(b[nameLength + 2:nameLength + 4].hex(), 16)
+    )
+
+def bytesToRecord(b):
+    name, nameLength = decodeName(b)
+    return RR(
+        name,
+        b[nameLength + 10:nameLength + 10 + int(b[nameLength + 8:nameLength + 10].hex(), 16)],
+        int(b[nameLength:nameLength + 2].hex(), 16),
+        int(b[nameLength + 2:nameLength + 4].hex(), 16),
+        int(b[nameLength + 4:nameLength + 8].hex(), 16)
+    )
+
+def bytesToMessage(b):
+    header = bytesToHeader(b[:12])
+    qList = []
+    rrList = []
+    length = 0
+    for i in range(header.qdcount):
+        q = bytesToQuestion(b[12 + length:])
+        length += len(q.qname) + 6
+        qList.append(q)
+    for i in range(header.ancount + header.nscount + header.arcount):
+        rr = bytesToRecord(b[12 + length:])
+        length += len(rr.name) + len(rr.rdata) + 12
+        rrList.append(rr)
+
+    return Message(header, qList, rrList)

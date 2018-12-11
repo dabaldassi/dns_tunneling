@@ -15,9 +15,11 @@ def send_udp_message(message, address, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         #sock.sendto(binascii.unhexlify(message), server_address)
-        print(message)
         sock.sendto(message, server_address)
         data, _ = sock.recvfrom(4096)
+        print(data)
+        msg = bytesToMessage(data)
+        print(msg)
     finally:
         sock.close()
     return binascii.hexlify(data).decode("utf-8")
@@ -57,10 +59,9 @@ message = "AA AA 01 00 00 01 00 00 00 00 00 00 " \
 # 01 01 01 01 == Rdata
 
 header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-print(header)
 question = Question("google.com")
-print(question)
-message = header.getMessage() + question.getMessage()
+message = Message(header, [question])
+print(message)
+print(message.getBytes())
 
-response = send_udp_message(message, "8.8.8.8", 53)
-print(format_hex(response))
+response = send_udp_message(message.getBytes(), "10.0.2.15", 53)
