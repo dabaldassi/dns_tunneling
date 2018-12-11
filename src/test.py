@@ -1,6 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-import binascii
 import socket
 from message import *
 
@@ -14,26 +13,22 @@ def send_udp_message(message, address, port):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        #sock.sendto(binascii.unhexlify(message), server_address)
         sock.sendto(message, server_address)
         data, _ = sock.recvfrom(4096)
         print(data)
-        msg = bytesToMessage(data)
-        print(msg)
+        print(bytesToMessage(data))
     finally:
         sock.close()
-    return binascii.hexlify(data).decode("utf-8")
+    return
 
+header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
+question = Question("google.com")
+message = Message(header, [question])
+print(message)
+print(message.getBytes())
 
-def format_hex(hex):
-    """format_hex returns a pretty version of a hex string"""
-    octets = [hex[i:i+2] for i in range(0, len(hex), 2)]
-    pairs = [" ".join(octets[i:i+2]) for i in range(0, len(octets), 2)]
-    return "\n".join(pairs)
+send_udp_message(message.getBytes(), "10.0.2.15", 53)
 
-
-message = "AA AA 01 00 00 01 00 00 00 00 00 00 " \
-"06 67 6f 6f 67 6c 65 03 63 6f 6d 00 00 01 00 01"
 ### Header ###
 # AA AA == ID(16)
 # 01 == Qr(1), Opcode(4), Aa(1), Tc(1), Rd(1)
@@ -57,11 +52,3 @@ message = "AA AA 01 00 00 01 00 00 00 00 00 00 " \
 # 00 00 04 94 == TTL(32)
 # 00 04 == Rdlength(16) 4 octets in this case
 # 01 01 01 01 == Rdata
-
-header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-question = Question("google.com")
-message = Message(header, [question])
-print(message)
-print(message.getBytes())
-
-response = send_udp_message(message.getBytes(), "10.0.2.15", 53)
