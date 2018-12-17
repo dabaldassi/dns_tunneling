@@ -11,12 +11,12 @@ def encodeName(name):
 
     return encodedName
 
-def decodeName(b):
+def decodeName(b, begin):
     name = ""
     nameLength = 0
-    i = 0
+    i = begin
 
-    while b[i:i+1].hex() != '00':
+    while b[i:i+1].hex() != '00' and int(b[i:i+1].hex(), 16) < 192:
         length = int(b[i:i+1].hex(), 16)
         for j in range(length):
             name += str(b[i+1+j:i+2+j], 'ascii')
@@ -25,9 +25,14 @@ def decodeName(b):
         if b[i:i+1].hex() != '00':
             name += '.'
 
+    if int(b[i:i+1].hex(), 16) >= 192:
+        name += decodeName(b, ((int(b[i:i+1].hex(), 16) - 192) << 7) + int(b[i+1:i+2].hex(), 16))[0]
+        nameLength += 1
+
     return name, nameLength + 1
 
 def getType(type):
+    print(type)
     if type == 1:
         return 'A'
     elif type == 2:
@@ -268,39 +273,40 @@ def bytesToHeader(b):
         int(b[4:6].hex(), 16),
         int(b[6:8].hex(), 16),
         int(b[8:10].hex(), 16),
-        int(b[10:].hex(), 16)
+        int(b[10:12].hex(), 16)
     )
 
-def bytesToQuestion(b):
-    name, nameLength = decodeName(b)
+def bytesToQuestion(b, begin):
+    name, nameLength = decodeName(b, begin)
     return Question(
         name,
-        int(b[nameLength:nameLength + 2].hex(), 16),
-        int(b[nameLength + 2:nameLength + 4].hex(), 16)
-    )
+        int(b[begin + nameLength:begin + nameLength + 2].hex(), 16),
+        int(b[begin + nameLength + 2:begin + nameLength + 4].hex(), 16)
+    ), nameLength + 4
 
-def bytesToRecord(b):
-    name, nameLength = decodeName(b)
+def bytesToRecord(b, begin):
+    name, nameLength = decodeName(b, begin)
+    dataLength = int(b[begin + nameLength + 8:begin + nameLength + 10].hex(), 16)
     return RR(
         name,
-        b[nameLength + 10:nameLength + 10 + int(b[nameLength + 8:nameLength + 10].hex(), 16)],
-        int(b[nameLength:nameLength + 2].hex(), 16),
-        int(b[nameLength + 2:nameLength + 4].hex(), 16),
-        int(b[nameLength + 4:nameLength + 8].hex(), 16)
-    )
+        b[begin + nameLength + 10:begin + nameLength + 10 + dataLength],
+        int(b[begin + nameLength:begin + nameLength + 2].hex(), 16),
+        int(b[begin + nameLength + 2:begin + nameLength + 4].hex(), 16),
+        int(b[begin + nameLength + 4:begin + nameLength + 8].hex(), 16)
+    ), nameLength + dataLength + 10
 
 def bytesToMessage(b):
-    header = bytesToHeader(b[:12])
+    header = bytesToHeader(b)
     qList = []
     rrList = []
     length = 0
     for i in range(header.qdcount):
-        q = bytesToQuestion(b[12 + length:])
-        length += len(q.qname) + 6
+        q, l = bytesToQuestion(b, 12 + length)
+        length += l
         qList.append(q)
     for i in range(header.ancount + header.nscount + header.arcount):
-        rr = bytesToRecord(b[12 + length:])
-        length += len(rr.name) + len(rr.rdata) + 12
+        rr, l= bytesToRecord(b, 12 + length)
+        length += l
         rrList.append(rr)
 
     return Message(header, qList, rrList)

@@ -27,7 +27,7 @@ message = Message(header, [question])
 print(message)
 print(message.getBytes())
 
-send_udp_message(message.getBytes(), "10.0.2.15", 53)
+send_udp_message(message.getBytes(), "8.8.8.8", 53)
 
 ### Header ###
 # AA AA == ID(16)
