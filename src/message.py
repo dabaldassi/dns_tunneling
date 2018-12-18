@@ -32,7 +32,6 @@ def decodeName(b, begin):
     return name, nameLength + 1
 
 def getType(type):
-    print(type)
     if type == 1:
         return 'A'
     elif type == 2:
@@ -73,6 +72,8 @@ def getType(type):
         return 'MAILA'
     elif type == 255:
         return '*'
+    else:
+        return type.to_bytes(2, 'big').hex()
 
 def getClass(classe):
     if classe == 1:
@@ -85,6 +86,8 @@ def getClass(classe):
         return 'HS'
     elif classe == 255:
         return '*'
+    else:
+        return type.to_bytes(2, 'big').hex()
 
 class Header:
 

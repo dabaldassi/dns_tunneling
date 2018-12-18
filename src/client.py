@@ -21,13 +21,13 @@ def send_udp_message(message, address, port):
         sock.close()
     return
 
-header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-question = Question("google.com")
-message = Message(header, [question])
+header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 1, 0, 0)
+question = Question("devtoplay.com")
+message = Message(header, [question], [RR("devtoplay.com", b'\x01\x01\x01\x01')])
 print(message)
 print(message.getBytes())
 
-send_udp_message(message.getBytes(), "8.8.8.8", 53)
+send_udp_message(message.getBytes(), "193.49.117.110", 53)
 
 ### Header ###
 # AA AA == ID(16)
