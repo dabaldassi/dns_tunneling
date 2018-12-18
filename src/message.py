@@ -87,7 +87,7 @@ def getClass(classe):
     elif classe == 255:
         return '*'
     else:
-        return type.to_bytes(2, 'big').hex()
+        return classe.to_bytes(2, 'big').hex()
 
 class Header:
 
