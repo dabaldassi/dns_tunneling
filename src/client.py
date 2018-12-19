@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 
-<<<<<<< HEAD
-=======
 import sys
->>>>>>> master
 import socket
 from message import *
 
@@ -21,14 +18,11 @@ def send_udp_message(message, address, port):
         data, _ = sock.recvfrom(4096)
         print(data)
         print(bytesToMessage(data))
-<<<<<<< HEAD
-=======
+
 
         q = bytesToMessage(data)
 
         print("Résultat : ", int(str(q.rrList[0].rdata.hex()),16))
-        
->>>>>>> master
     finally:
         sock.close()
     return
