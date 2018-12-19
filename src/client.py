@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+<<<<<<< HEAD
+=======
+import sys
+>>>>>>> master
 import socket
 from message import *
 
@@ -17,17 +21,30 @@ def send_udp_message(message, address, port):
         data, _ = sock.recvfrom(4096)
         print(data)
         print(bytesToMessage(data))
+<<<<<<< HEAD
+=======
+
+        q = bytesToMessage(data)
+
+        print("Résultat : ", int(str(q.rrList[0].rdata.hex()),16))
+        
+>>>>>>> master
     finally:
         sock.close()
     return
 
 header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 1, 0, 0)
 question = Question("devtoplay.com")
-message = Message(header, [question], [RR("devtoplay.com", b'\x01\x01\x01\x01')])
+
+message = Message(header, [question], [RR("devtoplay.com", b'\xad\x5a\x37')])
 print(message)
 print(message.getBytes())
 
-send_udp_message(message.getBytes(), "193.49.117.110", 53)
+if(len(sys.argv) == 2):
+    send_udp_message(message.getBytes(), sys.argv[1], 53)
+else:
+    print("Argument error, socket bind on 127.0.0.1")
+    send_udp_message(message.getBytes(), "127.0.0.1", 53)
 
 ### Header ###
 # AA AA == ID(16)
