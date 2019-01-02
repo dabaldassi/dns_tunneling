@@ -31,49 +31,49 @@ def decodeName(b, begin):
 
     return name, nameLength + 1
 
-def getType(type):
-    if type == 1:
+def getType(type_data):
+    if type_data == 1:
         return 'A'
-    elif type == 2:
+    elif type_data == 2:
         return 'NS'
-    elif type == 3:
+    elif type_data == 3:
         return 'MD'
-    elif type == 4:
+    elif type_data == 4:
         return 'MF'
-    elif type == 5:
+    elif type_data == 5:
         return 'CNAME'
-    elif type == 6:
+    elif type_data == 6:
         return 'SOA'
-    elif type == 7:
+    elif type_data == 7:
         return 'MB'
-    elif type == 8:
+    elif type_data == 8:
         return 'MG'
-    elif type == 9:
+    elif type_data == 9:
         return 'MR'
-    elif type == 10:
+    elif type_data == 10:
         return 'NULL'
-    elif type == 11:
+    elif type_data == 11:
         return 'WKS'
-    elif type == 12:
+    elif type_data == 12:
         return 'PTR'
-    elif type == 13:
+    elif type_data == 13:
         return 'HINFO'
-    elif type == 14:
+    elif type_data == 14:
         return 'MINFO'
-    elif type == 15:
+    elif type_data == 15:
         return 'MX'
-    elif type == 16:
+    elif type_data == 16:
         return 'TXT'
-    elif type == 252:
+    elif type_data == 252:
         return 'AXFR'
-    elif type == 253:
+    elif type_data == 253:
         return 'MAILB'
-    elif type == 254:
+    elif type_data == 254:
         return 'MAILA'
-    elif type == 255:
+    elif type_data == 255:
         return '*'
     else:
-        return type.to_bytes(2, 'big').hex()
+        return type_data.to_bytes(2, 'big').hex()
 
 def getClass(classe):
     if classe == 1:
@@ -179,16 +179,16 @@ class Question:
 
 class RR:
 
-    def __init__(self, name, rdata, type = 1, classe = 1, ttl = 0):
+    def __init__(self, name, rdata, type_data = 1, classe = 1, ttl = 0):
         self.name = name
-        self.type = type
+        self.type_data = type_data
         self.classe = classe
         self.ttl = ttl
         self.rdata = rdata
 
     def getBytes(self):
         msg = encodeName(self.name)
-        msg += self.type.to_bytes(2, 'big')
+        msg += self.type_data.to_bytes(2, 'big')
         msg += self.classe.to_bytes(2, 'big')
         msg += self.ttl.to_bytes(4, 'big')
         msg += len(self.rdata).to_bytes(2, 'big')
@@ -199,7 +199,7 @@ class RR:
     def __str__(self):
         string = "* Resource Record *\n"
         string += "Domain name : " + self.name
-        string += "\nType : " + getType(self.type)
+        string += "\nType : " + getType(self.type_data)
         string += "\nClass : " + getClass(self.classe)
         string += "\nTTL : " + str(self.ttl)
         string += "\nRaw data : " + self.rdata.hex().upper()
@@ -303,10 +303,15 @@ def bytesToMessage(b):
     qList = []
     rrList = []
     length = 0
+  
     for i in range(header.qdcount):
         q, l = bytesToQuestion(b, 12 + length)
         length += l
         qList.append(q)
+
+    if(header.arcount == 0):
+        header.arcount = 1
+        
     for i in range(header.ancount + header.nscount + header.arcount):
         rr, l= bytesToRecord(b, 12 + length)
         length += l

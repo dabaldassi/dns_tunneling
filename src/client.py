@@ -11,28 +11,28 @@ def send_udp_message(message, address, port):
     message should be a hexadecimal encoded string
     """
     server_address = (address, port)
-
+    print(message)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.sendto(message, server_address)
         data, _ = sock.recvfrom(4096)
         print(data)
-        print(bytesToMessage(data))
+        #print(bytesToMessage(data))
 
 
-        q = bytesToMessage(data)
+        #q = bytesToMessage(data)
 
-        print("Résultat : ", int(str(q.rrList[0].rdata.hex()),16))
+        #print("Résultat : ", int(str(q.rrList[0].rdata.hex()),16))
     finally:
         sock.close()
     return
 
-header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 1, 0, 0)
+header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
 question = Question("devtoplay.com")
 
-message = Message(header, [question], [RR("devtoplay.com", b'\xad\x5a\x37')])
-print(message)
-print(message.getBytes())
+message = Message(header, [question], [RR("devtoplay.com", b'\xad\x5a\x12\x32',16)])
+#print(message)
+#print(message.getBytes())
 
 if(len(sys.argv) == 2):
     send_udp_message(message.getBytes(), sys.argv[1], 53)

@@ -29,8 +29,10 @@ while True:
 
 
     res = calculator(q.rrList[0].rdata)
+
+    # print(q.rrList[0].rdata)
     
-    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 0), q.qList, [RR(q.qList[0].qname,res, 1, 1, 1)])
+    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 0), q.qList, [RR(q.qList[0].qname,res, 16, 1, 1)])
 
     print(message)
     print(message.getBytes())
