@@ -26,13 +26,19 @@ while True:
     data, ad = serversocket.recvfrom(4096)
     print(data)
     q = bytesToMessage(data)
+    print(q)
+    print(q.rrList[0].rdata)
 
-
-    res = calculator(q.rrList[0].rdata)
-
-    # print(q.rrList[0].rdata)
+    # res = calculator(q.rrList[0].rdata)
+    res = b'\x01\x01\x01\x01'
     
-    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 0), q.qList, [RR(q.qList[0].qname,res, 16, 1, 1)])
+    cmd = q.qList[0].qname.split(".")
+
+    if(cmd[0] == "woo"):
+        res = b'\x02\x02\x02\x02\x01\xAA\x12'
+        
+    
+    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 0, 0, 1), q.qList, [RR(q.qList[0].qname,res, 16, 1, 1)])
 
     print(message)
     print(message.getBytes())
