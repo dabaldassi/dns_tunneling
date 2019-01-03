@@ -12,12 +12,13 @@ def send_udp_message(message, address, port):
     """
     server_address = (address, port)
     print(message)
+    print(bytesToMessage(message))
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.sendto(message, server_address)
         data, _ = sock.recvfrom(4096)
         print(data)
-        #print(bytesToMessage(data))
+        print(bytesToMessage(data))
 
 
         #q = bytesToMessage(data)
@@ -27,10 +28,12 @@ def send_udp_message(message, address, port):
         sock.close()
     return
 
+#Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 0)
 header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-question = Question("devtoplay.com")
+question = Question("woo.devtoplay.com")
+#question = Question("google.com")
 
-message = Message(header, [question], [RR("devtoplay.com", b'\xad\x5a\x12\x32',16)])
+message = Message(header, [question])#, [RR("devtoplay.com", b'\xad\x5a\x12\x12')])#, RR("devtoplay.com", b'\xad\x5a\x12\x12',16)])
 #print(message)
 #print(message.getBytes())
 
