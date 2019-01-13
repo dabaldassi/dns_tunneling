@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import os
 import socket
 from message import *
 
@@ -12,30 +13,40 @@ def send_udp_message(message, address, port):
     """
     server_address = (address, port)
     print(message)
+    print(bytesToMessage(message))
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.sendto(message, server_address)
         data, _ = sock.recvfrom(4096)
         print(data)
-        #print(bytesToMessage(data))
-
-
-        #q = bytesToMessage(data)
-
-        #print("Résultat : ", int(str(q.rrList[0].rdata.hex()),16))
+        print(bytesToMessage(data).rrList[0].rdata.decode())
+        
+        
     finally:
         sock.close()
     return
 
 header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-question = Question("devtoplay.com")
+question = Question("2woo.devtoplay.com")
+#question = Question("google.com")
 
-message = Message(header, [question], [RR("devtoplay.com", b'\xad\x5a\x12\x32',16)])
+message = Message(header, [question])
+
 #print(message)
 #print(message.getBytes())
 
 if(len(sys.argv) == 2):
-    send_udp_message(message.getBytes(), sys.argv[1], 53)
+    s = ""
+    c = 0
+    while(s != 'exit'):
+        print("root@dnsproject$ " , end="")
+        s = input()
+
+        if(s != 'exit') :
+            question = Question(str(c)+s+".devtoplay.com")
+            message = Message(header, [question])
+            send_udp_message(message.getBytes(), sys.argv[1], 53)
+            c += 1
 else:
     print("Argument error, socket bind on 127.0.0.1")
     send_udp_message(message.getBytes(), "127.0.0.1", 53)
