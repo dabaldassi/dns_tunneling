@@ -23,7 +23,6 @@ while True:
     q = bytesToMessage(data)
 
     print(q)
-    print(q.rrList[0].rdata)
     
     cmd = q.qList[0].qname.split(".")
 
@@ -47,10 +46,12 @@ while True:
 
                 if(res is None):
                     res = b''
-                    
-                print(res)
-            
-    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 0, 0, 1), q.qList, [RR(q.qList[0].qname,res, 16, 1, 1)])
+                
+                res = len(res).to_bytes(1,'big') + res
+    
+    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 1), q.qList,
+                      [RR(q.qList[0].qname,b'\x01\x01\x01\x01', 1, 1, 1),
+                       RR(q.qList[0].qname,res, 16, 1, 1)])
 
     print(message)
     print(message.getBytes())

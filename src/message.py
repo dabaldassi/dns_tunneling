@@ -308,10 +308,7 @@ def bytesToMessage(b):
         q, l = bytesToQuestion(b, 12 + length)
         length += l
         qList.append(q)
-
-    # if(header.arcount == 0):
-    #     header.arcount = 1
-        
+    
     for i in range(header.ancount + header.nscount + header.arcount):
         rr, l= bytesToRecord(b, 12 + length)
         length += l

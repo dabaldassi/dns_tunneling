@@ -19,8 +19,8 @@ def send_udp_message(message, address, port):
         sock.sendto(message, server_address)
         data, _ = sock.recvfrom(4096)
         print(data)
-        print(bytesToMessage(data).rrList[0].rdata.decode())
-        
+        #print(bytesToMessage(data).rrList[0].rdata.decode())
+        print(bytesToMessage(data))
         
     finally:
         sock.close()
@@ -44,6 +44,7 @@ if(len(sys.argv) == 2):
 
         if(s != 'exit') :
             question = Question(str(c)+s+".devtoplay.com")
+            #question = Question("foo.devtoplay.com")
             message = Message(header, [question])
             send_udp_message(message.getBytes(), sys.argv[1], 53)
             c += 1
