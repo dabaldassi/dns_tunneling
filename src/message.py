@@ -31,7 +31,7 @@ def decodeName(b, begin):
 
     return name, nameLength + 1
 
-def getType(type_data):
+def getType(type_data):    
     if type_data == 1:
         return 'A'
     elif type_data == 2:
@@ -64,6 +64,8 @@ def getType(type_data):
         return 'MX'
     elif type_data == 16:
         return 'TXT'
+    elif type_data == 28:
+        return 'AAAA'
     elif type_data == 252:
         return 'AXFR'
     elif type_data == 253:

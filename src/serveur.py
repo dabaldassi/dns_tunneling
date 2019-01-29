@@ -16,6 +16,8 @@ else:
 
 last = ""
 res = b'\x01\x01\x01\x01'
+req_left = 0
+req = 0
 
 while True:
     data, ad = serversocket.recvfrom(4096)
@@ -27,7 +29,7 @@ while True:
     cmd = q.qList[0].qname.split(".")
 
     if(cmd[0] != "devtoplay"):
-        if(last != cmd[0]):
+        if(last != cmd[0] and req_left == 0):
             last = cmd[0]
             i = 0
             while(cmd[0][i] >= "0" and cmd[0][i] <= "9"):
@@ -48,10 +50,24 @@ while True:
                     res = b''
                 
                 res = len(res).to_bytes(1,'big') + res
+                a = [RR(q.qList[0].qname,res[i:i+4], 1, 1, 1)
+                     for i in range(0,len(res),4)]
+                a.append(RR(q.qList[0].qname,b'\x00\x00\x00\x00', 1, 1, 1))
+                print(a)
+                req_left = len(a)
+                req = 0
+
+    if(req  < req_left):
+        message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 0), q.qList, [a[req]])
+        req += 1
+
+        if(req == req_left):
+            req_left = 0
+    else:
+        message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 0), q.qList, [RR(q.qList[0].qname,b'\x01\x01\x01\x01', 1, 1, 1)])
+        
     
-    message = Message(Header(q.header.id, 1, 0, False, False, True, True, 0, 0, 1, 1, 0, 1), q.qList,
-                      [RR(q.qList[0].qname,b'\x01\x01\x01\x01', 1, 1, 1),
-                       RR(q.qList[0].qname,res, 16, 1, 1)])
+
 
     print(message)
     print(message.getBytes())
