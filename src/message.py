@@ -1,4 +1,3 @@
-
 def encodeName(name):
     domainList = name.split('.')
     encodedName = b''
@@ -11,27 +10,29 @@ def encodeName(name):
 
     return encodedName
 
+
 def decodeName(b, begin):
     name = ""
     nameLength = 0
     i = begin
 
-    while b[i:i+1].hex() != '00' and int(b[i:i+1].hex(), 16) < 192:
-        length = int(b[i:i+1].hex(), 16)
+    while b[i:i + 1].hex() != '00' and int(b[i:i + 1].hex(), 16) < 192:
+        length = int(b[i:i + 1].hex(), 16)
         for j in range(length):
-            name += str(b[i+1+j:i+2+j], 'ascii')
+            name += str(b[i + 1 + j:i + 2 + j], 'ascii')
         nameLength += length + 1
         i += length + 1
-        if b[i:i+1].hex() != '00':
+        if b[i:i + 1].hex() != '00':
             name += '.'
 
-    if int(b[i:i+1].hex(), 16) >= 192:
-        name += decodeName(b, ((int(b[i:i+1].hex(), 16) - 192) << 7) + int(b[i+1:i+2].hex(), 16))[0]
+    if int(b[i:i + 1].hex(), 16) >= 192:
+        name += decodeName(b, ((int(b[i:i + 1].hex(), 16) - 192) << 7) + int(b[i + 1:i + 2].hex(), 16))[0]
         nameLength += 1
 
     return name, nameLength + 1
 
-def getType(type_data):    
+
+def getType(type_data):
     if type_data == 1:
         return 'A'
     elif type_data == 2:
@@ -77,6 +78,7 @@ def getType(type_data):
     else:
         return type_data.to_bytes(2, 'big').hex()
 
+
 def getClass(classe):
     if classe == 1:
         return 'IN'
@@ -91,9 +93,11 @@ def getClass(classe):
     else:
         return classe.to_bytes(2, 'big').hex()
 
+
 class Header:
 
-    def __init__(self, id, qr, opcode, aa = False, tc = False, rd = True, ra = False, z = 0, rcode = 0, qdcount = 1, ancount = 0, nscount = 0, arcount = 0):
+    def __init__(self, id, qr, opcode, aa=False, tc=False, rd=True, ra=False, z=0, rcode=0, qdcount=1, ancount=0,
+                 nscount=0, arcount=0):
         self.id = id
         self.qr = qr
         self.opcode = opcode
@@ -148,8 +152,9 @@ class Header:
     def __str__(self):
         string = "* Header *\n"
         string += "ID : " + self.id.upper()
-        string += "\nQr : " + str(self.qr) + "\t\tOpcode : " + str(bool(self.opcode)) + "\t\tAa : " + str(bool(self.aa)) + "\t\tTc : " + str(bool(self.tc)) + "\t\tRd : " + str(bool(self.rd))
-        string += "\nRa : " + str(bool(self.ra)) + "\t\tZ : " + str(self.z) + "\t\tRcode : " + str(self.rcode)
+        string += "\nQr : " + str(self.qr) + "\t\tOpcode : " + str(bool(self.opcode)) + "\t\tAa : " + str(
+            bool(self.aa)) + "\t\tTc : " + str(bool(self.tc)) + "\t\tRd : " + str(bool(self.rd))
+        string += "\nRa : " + str(bool(self.ra)) + "\t\tZ : " + str(self.z) + "\t\tRcode : " + self.getRcode()
         string += "\nQdcount : " + str(self.qdcount)
         string += "\nAncount : " + str(self.ancount)
         string += "\nNscount : " + str(self.nscount)
@@ -157,9 +162,10 @@ class Header:
 
         return string
 
+
 class Question:
 
-    def __init__(self, domainName, qtype = 1, qclass = 1):
+    def __init__(self, domainName, qtype=1, qclass=1):
         self.qname = domainName
         self.qtype = qtype
         self.qclass = qclass
@@ -179,9 +185,10 @@ class Question:
 
         return string
 
+
 class RR:
 
-    def __init__(self, name, rdata, type_data = 1, classe = 1, ttl = 0):
+    def __init__(self, name, rdata, type_data=1, classe=1, ttl=0):
         self.name = name
         self.type_data = type_data
         self.classe = classe
@@ -211,7 +218,7 @@ class RR:
 
 class Message:
 
-    def __init__(self, header, qList = [], rrList = []):
+    def __init__(self, header, qList=[], rrList=[]):
         self.header = header
         self.qList = qList
         self.rrList = rrList
@@ -239,7 +246,8 @@ class Message:
 
     def getAdditional(self):
         if self.header.arcount > 0:
-            return self.rrList[(self.header.ancount + self.header.nscount):(self.header.ancount + self.header.nscount + self.header.arcount)]
+            return self.rrList[(self.header.ancount + self.header.nscount):(
+                        self.header.ancount + self.header.nscount + self.header.arcount)]
         else:
             return []
 
@@ -247,22 +255,23 @@ class Message:
         string = "==============================\n\n"
         string += str(self.header)
         for i in range(self.header.qdcount):
-            string += "\n\n" + str(i+1) + "\t"
+            string += "\n\n" + str(i + 1) + "\t"
             string += str(self.qList[i])
         answer = self.getAnswer()
         for i in range(self.header.ancount):
-            string += "\n\n" + str(i+1) + "\t"
+            string += "\n\n" + str(i + 1) + "\t"
             string += str(answer[i])
         authority = self.getAuthority()
         for i in range(self.header.nscount):
-            string += "\n\n" + str(i+1) + "\t"
+            string += "\n\n" + str(i + 1) + "\t"
             string += str(authority[i])
         additional = self.getAdditional()
         for i in range(self.header.arcount):
-            string += "\n\n" + str(i+1) + "\t"
+            string += "\n\n" + str(i + 1) + "\t"
             string += str(additional[i])
 
         return string
+
 
 def bytesToHeader(b):
     return Header(
@@ -281,6 +290,7 @@ def bytesToHeader(b):
         int(b[10:12].hex(), 16)
     )
 
+
 def bytesToQuestion(b, begin):
     name, nameLength = decodeName(b, begin)
     return Question(
@@ -288,6 +298,7 @@ def bytesToQuestion(b, begin):
         int(b[begin + nameLength:begin + nameLength + 2].hex(), 16),
         int(b[begin + nameLength + 2:begin + nameLength + 4].hex(), 16)
     ), nameLength + 4
+
 
 def bytesToRecord(b, begin):
     name, nameLength = decodeName(b, begin)
@@ -300,19 +311,20 @@ def bytesToRecord(b, begin):
         int(b[begin + nameLength + 4:begin + nameLength + 8].hex(), 16)
     ), nameLength + dataLength + 10
 
+
 def bytesToMessage(b):
     header = bytesToHeader(b)
     qList = []
     rrList = []
     length = 0
-  
+
     for i in range(header.qdcount):
         q, l = bytesToQuestion(b, 12 + length)
         length += l
         qList.append(q)
-    
+
     for i in range(header.ancount + header.nscount + header.arcount):
-        rr, l= bytesToRecord(b, 12 + length)
+        rr, l = bytesToRecord(b, 12 + length)
         length += l
         rrList.append(rr)
 

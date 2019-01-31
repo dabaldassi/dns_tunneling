@@ -1,60 +1,62 @@
 #!/usr/bin/python3
 
-import sys
-import os
 import socket
-from message import *
+from src.message import *
 
 
-def send_udp_message(message, address, port):
+def send_udp_message(message, sock, server_address):
     """send_udp_message sends a message to UDP server
 
     message should be a hexadecimal encoded string
     """
-    server_address = (address, port)
-    print(message)
-    print(bytesToMessage(message))
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        sock.sendto(message, server_address)
+        sock.sendto(message.getBytes(), server_address)
         data, _ = sock.recvfrom(4096)
-        print(data)
+        message = bytesToMessage(data)
+        print(message)
+        while not("devtoplay.com" in message.qList[0].qname) or len(message.getAnswer()) == 0:
+            data, _ = sock.recvfrom(4096)
+            message = bytesToMessage(data)
         print(bytesToMessage(data))
-        
-        # for r in bytesToMessage(data).rrList:
-        #     if(rrList.name == bytesToMessage(data).qList[0].qname):
-        #         print(r.d
-        #print(bytesToMessage(data))
-        
     finally:
-        sock.close()
-    return
+        return message.getAnswer()[0].rdata
 
-header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-question = Question("2woo.devtoplay.com")
-#question = Question("google.com")
 
-message = Message(header, [question])
+def main(inet="127.0.0.1"):
+    header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
+    question = Question("2woo.devtoplay.com")
+    message = Message(header, [question])
+    server_address = (inet, 53)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-#print(message)
-#print(message.getBytes())
+    if(inet != "127.0.0.1"):
+        s = ""
+        c = 0
+        while(s != 'exit'):
+            print("root@dnsproject$ ", end="")
+            s = input()
 
-if(len(sys.argv) == 2):
-    s = ""
-    c = 0
-    while(s != 'exit'):
-        print("root@dnsproject$ " , end="")
-        s = input()
+            if(s != 'exit') :
+                question = Question(str(c)+s+".devtoplay.com")
+                message = Message(header, [question])
+                rdata = send_udp_message(message, sock, server_address)
+                c += 1
+                output = str(rdata, 'ascii')
+                while rdata != b'\x00\x00\x00\x00':
+                    question = Question(str(c) + s + ".devtoplay.com")
+                    message = Message(header, [question])
+                    rdata = send_udp_message(message, sock, server_address)
+                    c += 1
+                    output += str(rdata, 'ascii')
+                print(output)
+    else:
+        print("Argument error, socket bind on 127.0.0.1")
+        send_udp_message(message.getBytes(), sock, server_address)
 
-        if(s != 'exit') :
-            question = Question(str(c)+s+".devtoplay.com")
-            #question = Question("foo.devtoplay.com")
-            message = Message(header, [question])
-            send_udp_message(message.getBytes(), sys.argv[1], 53)
-            c += 1
-else:
-    print("Argument error, socket bind on 127.0.0.1")
-    send_udp_message(message.getBytes(), "127.0.0.1", 53)
+
+if __name__ == "__main__":
+    main("192.168.99.94")
+
 
 ### Header ###
 # AA AA == ID(16)
