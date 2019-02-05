@@ -1,0 +1,1 @@
+2368 requêtes de 4 octets en 45,323 secondes --> 209,0 octets/secondes
