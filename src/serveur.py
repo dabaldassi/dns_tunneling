@@ -62,6 +62,9 @@ while True:
 
     if(req  < req_left):
         if(cmd[0] != last):
+            if "SIGINT" in cmd[0]:
+                req = len(a) - 1
+            
             answer = a[req]
             a[req].name = q.qList[0].qname
             req += 1
