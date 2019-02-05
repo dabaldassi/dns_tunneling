@@ -21,16 +21,14 @@ req = 0
 
 while True:
     data, ad = serversocket.recvfrom(4096)
-    print(data)
+    #print(data)
     q = bytesToMessage(data)
 
-    print(q)
-    
     cmd = q.qList[0].qname.split(".")
-    print(cmd)
-
+    
     if(cmd[0] != "devtoplay"):
         if(last != cmd[0] and req_left == 0):
+            cmd[0] = cmd[0].replace("\x07",".")
             i = 0
             while(cmd[0][i] >= "0" and cmd[0][i] <= "9"): # split salt and command
                 i += 1
@@ -79,8 +77,8 @@ while True:
     last = cmd[0]
 
 
-    print(message)
-    print(message.getBytes())
+    # print(message)
+    # print(message.getBytes())
     serversocket.sendto(message.getBytes(), ad)
     print("end")
         
