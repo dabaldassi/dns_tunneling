@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import signal
 import socket
+import time
 from message import *
 
 
@@ -41,10 +42,14 @@ def main(inet="127.0.0.1"):
     if(inet != "127.0.0.1"):
         s = ""
         c = 0
+        t0 = 0
         while(s != 'exit'):
+            if t0 != 0:
+                print(time.time() - t0)
             print("root@dnsproject$ ", end="")
             s = input()
-
+            s = s.replace('.', '\x07')
+            t0 = time.time()
             if(s != 'exit') :
                 question = Question(str(c)+s+".devtoplay.com")
                 message = Message(header, [question])
