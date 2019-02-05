@@ -1,7 +1,15 @@
 #!/usr/bin/python3
-
+import signal
 import socket
-from src.message import *
+from message import *
+
+
+interruption = False
+
+
+def sigint_handler(signum, frame):
+    global interruption
+    interruption = True
 
 
 def send_udp_message(message, sock, server_address):
@@ -13,16 +21,17 @@ def send_udp_message(message, sock, server_address):
         sock.sendto(message.getBytes(), server_address)
         data, _ = sock.recvfrom(4096)
         message = bytesToMessage(data)
-        print(message)
         while not("devtoplay.com" in message.qList[0].qname) or len(message.getAnswer()) == 0:
             data, _ = sock.recvfrom(4096)
             message = bytesToMessage(data)
-        print(bytesToMessage(data))
+        #print(message)
     finally:
         return message.getAnswer()[0].rdata
 
 
 def main(inet="127.0.0.1"):
+    global interruption
+    signal.signal(signal.SIGINT, sigint_handler)
     header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
     question = Question("2woo.devtoplay.com")
     message = Message(header, [question])
@@ -42,20 +51,29 @@ def main(inet="127.0.0.1"):
                 rdata = send_udp_message(message, sock, server_address)
                 c += 1
                 output = str(rdata, 'ascii')
-                while rdata != b'\x00\x00\x00\x00':
+                while not interruption and rdata != b'\x00\x00\x00\x00':
                     question = Question(str(c) + s + ".devtoplay.com")
                     message = Message(header, [question])
                     rdata = send_udp_message(message, sock, server_address)
                     c += 1
                     output += str(rdata, 'ascii')
+                    if len(output) > 2048:
+                        print(output, end='', flush=True)
+                        output = ""
                 print(output)
+                if interruption:
+                    interruption = False
+                    question = Question(str(c) + "SIGINT" + ".devtoplay.com")
+                    message = Message(header, [question])
+                    send_udp_message(message, sock, server_address)
+                    c += 1
     else:
         print("Argument error, socket bind on 127.0.0.1")
         send_udp_message(message.getBytes(), sock, server_address)
 
 
 if __name__ == "__main__":
-    main("192.168.99.94")
+    main("192.168.99.1")
 
 
 ### Header ###
