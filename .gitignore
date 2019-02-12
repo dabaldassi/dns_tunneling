@@ -1,3 +1,5 @@
 *~*
 *#*
 build/*
+src/__pycache__/*
+.idea/

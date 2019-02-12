@@ -2,3 +2,5 @@ https://www.frameip.com/dns/
 https://gist.github.com/fffaraz/9d9170b57791c28ccda9255b48315168
 https://openclassrooms.com/fr/courses/857447-apprenez-le-fonctionnement-des-reseaux-tcp-ip/857163-le-service-dns
 https://routley.io/tech/2017/12/28/hand-writing-dns-messages.html
+https://www.ietf.org/rfc/rfc1035.txt
+http://www.firewall.cx/networking-topics/protocols/domain-name-system-dns/161-protocols-dns-response.html

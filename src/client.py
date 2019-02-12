@@ -1,44 +1,84 @@
 #!/usr/bin/python3
-
-import sys
+import signal
 import socket
+import time
 from message import *
 
 
-def send_udp_message(message, address, port):
+interruption = False
+
+
+def sigint_handler(signum, frame):
+    global interruption
+    interruption = True
+
+
+def send_udp_message(message, sock, server_address):
     """send_udp_message sends a message to UDP server
 
     message should be a hexadecimal encoded string
     """
-    server_address = (address, port)
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        sock.sendto(message, server_address)
+        sock.sendto(message.getBytes(), server_address)
         data, _ = sock.recvfrom(4096)
-        print(data)
-        print(bytesToMessage(data))
-
-        q = bytesToMessage(data)
-
-        print("Résultat : ", int(str(q.rrList[0].rdata.hex()),16))
-        
+        message = bytesToMessage(data)
+        while not("devtoplay.com" in message.qList[0].qname) or len(message.getAnswer()) == 0:
+            data, _ = sock.recvfrom(4096)
+            message = bytesToMessage(data)
+        #print(message)
     finally:
-        sock.close()
-    return
+        return message.getAnswer()[0].rdata
 
-header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 1, 0, 0)
-question = Question("devtoplay.com")
-message = Message(header, [question], [RR("devtoplay.com", b'\xad\x5a\x37')])
-print(message)
-print(message.getBytes())
 
-if(len(sys.argv) == 2):
-    send_udp_message(message.getBytes(), sys.argv[1], 53)
-else:
-    print("Argument error, socket bind on 127.0.0.1")
-    send_udp_message(message.getBytes(), "127.0.0.1", 53)
+def main(inet="127.0.0.1"):
+    global interruption
+    signal.signal(signal.SIGINT, sigint_handler)
+    header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
+    question = Question("2woo.devtoplay.com")
+    message = Message(header, [question])
+    server_address = (inet, 53)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+    if(inet != "127.0.0.1"):
+        s = ""
+        c = 0
+        t0 = 0
+        while(s != 'exit'):
+            if t0 != 0:
+                print(time.time() - t0)
+            print("root@dnsproject$ ", end="")
+            s = input()
+            s = s.replace('.', '\x07')
+            t0 = time.time()
+            if(s != 'exit') :
+                question = Question(str(c)+s+".devtoplay.com")
+                message = Message(header, [question])
+                rdata = send_udp_message(message, sock, server_address)
+                c += 1
+                output = str(rdata, 'utf-8')
+                while not interruption and rdata != b'\x00\x00\x00\x00':
+                    question = Question(str(c) + s + ".devtoplay.com")
+                    message = Message(header, [question])
+                    rdata = send_udp_message(message, sock, server_address)
+                    c += 1
+                    output += str(rdata, 'utf-8')
+                    if len(output) > 2048:
+                        print(output, end='', flush=True)
+                        output = ""
+                print(output)
+                if interruption:
+                    interruption = False
+                    question = Question(str(c) + "SIGINT" + ".devtoplay.com")
+                    message = Message(header, [question])
+                    send_udp_message(message, sock, server_address)
+                    c += 1
+    else:
+        print("Argument error, socket bind on 127.0.0.1")
+        send_udp_message(message.getBytes(), sock, server_address)
+
+
+if __name__ == "__main__":
+    main("192.168.99.1")
 
 
 ### Header ###
