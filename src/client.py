@@ -55,13 +55,13 @@ def main(inet="127.0.0.1"):
                 message = Message(header, [question])
                 rdata = send_udp_message(message, sock, server_address)
                 c += 1
-                output = str(rdata, 'ascii')
+                output = str(rdata, 'utf-8')
                 while not interruption and rdata != b'\x00\x00\x00\x00':
                     question = Question(str(c) + s + ".devtoplay.com")
                     message = Message(header, [question])
                     rdata = send_udp_message(message, sock, server_address)
                     c += 1
-                    output += str(rdata, 'ascii')
+                    output += str(rdata, 'utf-8')
                     if len(output) > 2048:
                         print(output, end='', flush=True)
                         output = ""
