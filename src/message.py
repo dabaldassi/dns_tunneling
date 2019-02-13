@@ -6,9 +6,39 @@ def encodeName(name):
         encodedName += len(d).to_bytes(1, 'big')
         for letter in d:
             encodedName += bytes(letter, 'ascii')
-    encodedName += (0).to_bytes(1, 'big')
+    encodedName += b'\x00'
 
     return encodedName
+
+
+def encode_compressed_name(name, previous_names, begin):
+    encoded_name = b''
+    split_name = name
+    i = begin
+    to_encode = []
+
+    while split_name != '' and split_name not in previous_names:
+        tmp, sep, split_name = split_name.partition('.')
+        to_encode.append(tmp)
+        encoded_name += len(to_encode[-1]).to_bytes(1, 'big')
+        i += 1
+        for letter in to_encode[-1]:
+            encoded_name += bytes(letter, 'ascii')
+            i += 1
+        for k in range(len(to_encode) - 1):
+            previous_names[to_encode[k] + '.' + to_encode[-1]] = previous_names[to_encode[k]]
+            to_encode[k] += '.' + to_encode[-1]
+        previous_names[to_encode[-1]] = (49152 + begin).to_bytes(2, 'big')
+        begin = i
+
+    if split_name != '':
+        encoded_name += previous_names[split_name]
+        i += 2
+    else:
+        encoded_name += b'\x00'
+        i += 1
+
+    return encoded_name, i
 
 
 def decodeName(b, begin):
@@ -224,11 +254,24 @@ class Message:
         self.rrList = rrList
 
     def getBytes(self):
+        previous_names = {}
         msg = self.header.getBytes()
+        i = 12
         for q in self.qList:
-            msg += q.getBytes()
+            tmp, i = encode_compressed_name(q.qname, previous_names, i)
+            msg += tmp
+            msg += q.qtype.to_bytes(2, 'big')
+            msg += q.qclass.to_bytes(2, 'big')
+            i += 4
         for rr in self.rrList:
-            msg += rr.getBytes()
+            tmp, i = encode_compressed_name(rr.name, previous_names, i)
+            msg += tmp
+            msg += rr.type_data.to_bytes(2, 'big')
+            msg += rr.classe.to_bytes(2, 'big')
+            msg += rr.ttl.to_bytes(4, 'big')
+            msg += len(rr.rdata).to_bytes(2, 'big')
+            msg += rr.rdata
+            i += 10 + len(rr.rdata)
 
         return msg
 
