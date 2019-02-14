@@ -19,24 +19,25 @@ def encode_compressed_name(name, previous_names, begin):
 
     while split_name != '' and split_name not in previous_names:
         tmp, sep, split_name = split_name.partition('.')
-        to_encode.append(tmp)
-        encoded_name += len(to_encode[-1]).to_bytes(1, 'big')
+        to_encode.append([tmp,i])
+        encoded_name += len(to_encode[-1][0]).to_bytes(1, 'big')
         i += 1
-        for letter in to_encode[-1]:
+        for letter in to_encode[-1][0]:
             encoded_name += bytes(letter, 'ascii')
             i += 1
         for k in range(len(to_encode) - 1):
-            previous_names[to_encode[k] + '.' + to_encode[-1]] = previous_names[to_encode[k]]
-            to_encode[k] += '.' + to_encode[-1]
-        previous_names[to_encode[-1]] = (49152 + begin).to_bytes(2, 'big')
-        begin = i
+            to_encode[k][0] += '.' + to_encode[-1][0]
 
     if split_name != '':
         encoded_name += previous_names[split_name]
         i += 2
+        for (ns, index) in to_encode:
+            previous_names[ns + '.' + split_name] = (49152 + index).to_bytes(2, 'big')
     else:
         encoded_name += b'\x00'
         i += 1
+        for (ns, index) in to_encode:
+            previous_names[ns] = (49152 + index).to_bytes(2, 'big')
 
     return encoded_name, i
 
@@ -269,9 +270,16 @@ class Message:
             msg += rr.type_data.to_bytes(2, 'big')
             msg += rr.classe.to_bytes(2, 'big')
             msg += rr.ttl.to_bytes(4, 'big')
-            msg += len(rr.rdata).to_bytes(2, 'big')
-            msg += rr.rdata
-            i += 10 + len(rr.rdata)
+            i += 10
+            if rr.type_data == 2:
+                tmp, i2 = encode_compressed_name(rr.rdata, previous_names, i)
+                msg += (i2-i).to_bytes(2, 'big')
+                msg += tmp
+                i = i2
+            else:
+                msg += len(rr.rdata).to_bytes(2, 'big')
+                msg += rr.rdata
+                i += len(rr.rdata)
 
         return msg
 
