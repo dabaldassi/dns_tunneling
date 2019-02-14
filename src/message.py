@@ -276,6 +276,12 @@ class Message:
                 msg += (i2-i).to_bytes(2, 'big')
                 msg += tmp
                 i = i2
+            elif rr.type_data == 15:
+                tmp, i2 = encode_compressed_name(rr.rdata, previous_names, i + 2)
+                msg += (i2-i).to_bytes(2, 'big')
+                msg += b'\x00\x01'
+                msg += tmp
+                i = i2
             else:
                 msg += len(rr.rdata).to_bytes(2, 'big')
                 msg += rr.rdata
