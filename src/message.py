@@ -57,7 +57,7 @@ def decodeName(b, begin):
             name += '.'
 
     if int(b[i:i + 1].hex(), 16) >= 192:
-        name += decodeName(b, ((int(b[i:i + 1].hex(), 16) - 192) << 7) + int(b[i + 1:i + 2].hex(), 16))[0]
+        name += decodeName(b, int(b[i:i+2].hex(), 16) - 49152)[0]
         nameLength += 1
 
     return name, nameLength + 1
