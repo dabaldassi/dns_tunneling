@@ -22,59 +22,80 @@ def send_udp_message(message, sock, server_address):
         sock.sendto(message.getBytes(), server_address)
         data, _ = sock.recvfrom(4096)
         message = bytesToMessage(data)
-        while not("devtoplay.com" in message.qList[0].qname) or len(message.getAnswer()) == 0:
+        while not("devtoplay.com" in message.qList[0].qname):
             data, _ = sock.recvfrom(4096)
             message = bytesToMessage(data)
-        #print(message)
+        print(message)
     finally:
-        return message.getAnswer()[0].rdata
+        return message
 
 
 def main(inet="127.0.0.1"):
-    global interruption
-    signal.signal(signal.SIGINT, sigint_handler)
-    header = Header("aaaa", 0, 0, False, False, True, False, 0, 0, 1, 0, 0, 0)
-    question = Question("2woo.devtoplay.com")
-    message = Message(header, [question])
     server_address = (inet, 53)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    if(inet != "127.0.0.1"):
-        s = ""
-        c = 0
-        t0 = 0
-        while(s != 'exit'):
-            if t0 != 0:
-                print(time.time() - t0)
-            print("root@dnsproject$ ", end="")
-            s = input()
-            s = s.replace('.', '\x07')
-            t0 = time.time()
-            if(s != 'exit') :
-                question = Question(str(c)+s+".devtoplay.com")
+    global interruption
+    signal.signal(signal.SIGINT, sigint_handler)
+
+    header = Header('aaaa', 0, 0)
+
+    command = ''
+    salt = 0
+
+    while command != 'exit':
+        print("root@dnsproject$", end=" ")
+        command = input()
+        t0 = time.time()
+        command = command.replace('.', '\x07')
+
+        if command != 'exit':
+            question = Question(str(salt)+command+".devtoplay.com", 16)
+            message = Message(header, [question])
+
+            receipt = send_udp_message(message, sock, server_address)
+            salt += 1
+
+            output = ''
+            txt_length = -1
+
+            if len(receipt.getAnswer()) > 0:
+                i = 0
+                while len(receipt.getAnswer()[0].rdata[i:]) > 0:
+                    txt_length = receipt.getAnswer()[0].rdata[i]
+                    i += 1
+                    output += str(receipt.getAnswer()[0].rdata[i:i+txt_length], 'utf-8')
+                    i += txt_length
+
+            while not interruption and receipt.header.rcode == 0 and txt_length != 0:
+                if len(output) > 2048:
+                    print(output, end='', flush=True)
+                    output = ''
+
+                question = Question(str(salt)+command+".devtoplay.com", 16)
                 message = Message(header, [question])
-                rdata = send_udp_message(message, sock, server_address)
-                c += 1
-                output = str(rdata, 'utf-8')
-                while not interruption and rdata != b'\x00\x00\x00\x00':
-                    question = Question(str(c) + s + ".devtoplay.com")
-                    message = Message(header, [question])
-                    rdata = send_udp_message(message, sock, server_address)
-                    c += 1
-                    output += str(rdata, 'utf-8')
-                    if len(output) > 2048:
-                        print(output, end='', flush=True)
-                        output = ""
-                print(output)
-                if interruption:
-                    interruption = False
-                    question = Question(str(c) + "SIGINT" + ".devtoplay.com")
-                    message = Message(header, [question])
-                    send_udp_message(message, sock, server_address)
-                    c += 1
-    else:
-        print("Argument error, socket bind on 127.0.0.1")
-        send_udp_message(message.getBytes(), sock, server_address)
+
+                receipt = send_udp_message(message, sock, server_address)
+                salt += 1
+
+                txt_length = -1
+
+                if len(receipt.getAnswer()) > 0:
+                    i = 0
+                    while len(receipt.getAnswer()[0].rdata[i:]) > 0:
+                        txt_length = receipt.getAnswer()[0].rdata[i]
+                        i += 1
+                        output += str(receipt.getAnswer()[0].rdata[i:i + txt_length], 'utf-8')
+                        i += txt_length
+
+            print(output)
+            print(time.time()-t0)
+
+            if interruption:
+                interruption = False
+                question = Question(str(salt) + "SIGINT.devtoplay.com", 16)
+                message = Message(header, [question])
+                send_udp_message(message, sock, server_address)
+                salt += 1
 
 
 if __name__ == "__main__":
