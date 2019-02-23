@@ -3,10 +3,9 @@ import signal
 import socket
 import time
 from message import *
-
+from stream import *
 
 interruption = False
-
 
 def sigint_handler(signum, frame):
     global interruption
@@ -99,7 +98,15 @@ def main(inet="127.0.0.1"):
 
 
 if __name__ == "__main__":
-    main("192.168.99.1")
+    #main()
+    s = Stream()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    while(True):
+        sock.sendto(s.read(), ("192.168.0.12",8888))
+        data, _ = sock.recvfrom(4096)
+        print(data)
+        #print(s.read())
 
 
 ### Header ###
