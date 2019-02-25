@@ -1,34 +1,28 @@
 import sys
-import io
+import os
 from threading import Thread
 from queue import Queue
 
 class Stream:
     def __init__(self):
-        self.length=256
+        self.length=100
         self.buffer = b''
+        self.queue = Queue()
         self.thread = Thread(target=self.run)
         self.thread.start()
-        self.queue = Queue()
+      
 
     def read(self):
-        # if(not self.queue.empty()):
-        #     return self.queue.get(block=False)
-        # return b'nothing'
-        return self.queue.get(block=True)
-    
+        if(not self.queue.empty()):
+            return self.queue.get(block=False)
+        return b'nothing'
+        
     def run(self):
-        input_stream = io.open(sys.stdin.fileno(), mode='rb') # Read stdin as binary
-        print("Thread : Enter")
+        
         while(True):
-            r = input_stream.read(1) # Read one byte
-            #print("Thread : ", r)
-            self.buffer += r
-
-            if(len(self.buffer) >= self.length):
-               # print(256)
-                self.queue.put(self.buffer)
-                self.buffer = b''
-
+            r = os.read(sys.stdin.fileno(), 1024)
+            #print(r)
+            self.queue.put(r)
+           
     def stop(self):
         self.thread.kill()
