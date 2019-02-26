@@ -5,7 +5,7 @@ def encodeName(name):
     for d in domainList:
         encodedName += len(d).to_bytes(1, 'big')
         for letter in d:
-            encodedName += bytes(letter, 'ascii')
+            encodedName += bytes(letter, 'latin-1')
     encodedName += b'\x00'
 
     return encodedName
@@ -23,7 +23,7 @@ def encode_compressed_name(name, previous_names, begin):
         encoded_name += len(to_encode[-1][0]).to_bytes(1, 'big')
         i += 1
         for letter in to_encode[-1][0]:
-            encoded_name += bytes(letter, 'ascii')
+            encoded_name += bytes(letter, 'latin-1')
             i += 1
         for k in range(len(to_encode) - 1):
             to_encode[k][0] += '.' + to_encode[-1][0]
@@ -50,7 +50,7 @@ def decodeName(b, begin):
     while b[i:i + 1].hex() != '00' and int(b[i:i + 1].hex(), 16) < 192:
         length = int(b[i:i + 1].hex(), 16)
         for j in range(length):
-            name += str(b[i + 1 + j:i + 2 + j], 'ascii')
+            name += str(b[i + 1 + j:i + 2 + j], 'latin-1')
         nameLength += length + 1
         i += length + 1
         if b[i:i + 1].hex() != '00':
@@ -417,3 +417,27 @@ def writeTXT(txt):
         i+=l
 
     return result
+
+def defaultMessage(query):
+    name = query.qList[0].qname
+    default_RR = { 1:([RR(name,b'\x01'*4,1,1,1)],
+                      [],
+                      []),
+                   2:([RR(name,b'\x01'*4,1,1,1)],
+                      [RR(name,b'salut.devtoplay.com',2,1,1)],
+                      [RR("salut.devtoplay.com",b'\x02'*4,1,1,1)]),
+                   16:([RR(name,writeTXT(b'ACK'),16,1,1)],
+                       [],
+                       []),
+                   28:([RR(name,b'\x01'*16,28,1,1)],
+                       [],
+                       []) }
+
+    try:
+        answer,ns,additional = default_RR[query.qList[0].qtype]
+    except:
+        answer,ns,additional = default_RR[1]
+
+    return Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,len(answer),len(ns),len(additional)),
+                   query.qList,
+                   answer+ns+additional)

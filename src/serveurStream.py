@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import time
 import sys
 import os
 import socket
@@ -80,12 +81,7 @@ def main():
     nb_bytes = 255
     answer_array = []
     answer,ns,additional = [],[],[]
-    # default_RR = { 1:(RR("",b'\x01\x01\x01\x01',1,1,1),
-    #                   [],
-    #                   [])
-    #                2:(RR("",b'\x01\x01\x01\x01',1,1,1),
-    #                   RR("",b'salut.devtoplay.com',2,1,1),
-    #                   RR("salut.devtoplay.com",b'\x02\x02\x02\x02',1,1,1)
+    
     
     while True:
         data, ad = serversocket.recvfrom(4096)
@@ -135,22 +131,35 @@ def main():
 
         serversocket.sendto(message.getBytes(), ad)
         print("end")
-        
-        
-if(__name__ == "__main__"):
-    #main()
 
+def mainStream():
     s = Stream()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(("192.168.0.12",8888))
+
+    if(len(sys.argv) == 2):
+        sock.bind((sys.argv[1],53))
+    else:
+        sock.bind(("127.0.0.1",53))
     
     while(True):
-        data, ad = sock.recvfrom(4096)
+        query, ad = sock.recvfrom(4096)
+        query = bytesToMessage(query)
+        data = query.qList[0].qname.split(".devtoplay.com")[0]
 
-        if(data != b'nothing'):
-            sys.stdout.buffer.write(data)
-            sys.stdout.flush()
+        if('you' in data):
+            message = Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,1,0,0),
+                              query.qList,
+                              [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
+        else:
+            message = defaultMessage(query)
+            if(data != 'devtoplay.com' and data != 'nothing'):
+                sys.stdout.buffer.write(bytes(data,'latin-1'))
+                sys.stdout.flush()
+        
+        sock.sendto(message.getBytes(),ad)
 
-        data = s.read()
-        sock.sendto(data,ad)
+if(__name__ == "__main__"):
+    #main()
+    mainStream()
+    
         
