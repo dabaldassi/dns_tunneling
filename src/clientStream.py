@@ -29,7 +29,7 @@ def send_udp_message(message, sock, server_address):
         while not("devtoplay.com" in message.qList[0].qname):
             data, _ = sock.recvfrom(4096)
             message = bytesToMessage(data)
-        print(message)
+        #print(message)
     finally:
         return message
 
@@ -101,25 +101,34 @@ def main(inet="127.0.0.1"):
                 send_udp_message(message, sock, server_address)
                 salt += 1
 
-if __name__ == "__main__":
-    #main()
+
+def mainStream(inet="127.0.0.1"):
     s = Stream()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    ad = ("192.168.0.12",8888)
-    
-    sock.connect(ad)
-   
-    while(True):
-        
-        data = s.read()
-        sock.send(data)
-        
-        data = sock.recv(4096)
+    server_address = (inet,53)
 
-        if(data != b'nothing'):
-            sys.stdout.buffer.write(data)
-            sys.stdout.flush()
+    header = Header('aaaa', 0, 0)
+    
+    while(True):
+        data = s.read()
+        question = [Question(str(data,'latin-1')+'.devtoplay.com',16)]
+        message = Message(header,question)
+
+        if len(message.getBytes()) < 512:
             
+            receipt = send_udp_message(message,sock,server_address)
+            message = Message(header,[Question("you.devtoplay.com",16)])
+            receipt = send_udp_message(message,sock,server_address)
+            data = readTXT(receipt.getAnswer()[0].rdata)
+            
+            if(data != b'nothing'):
+                sys.stdout.buffer.write(data)
+                sys.stdout.flush()
+                
+if __name__ == "__main__":
+    #main()
+    mainStream("192.168.0.12")
+    
 ### Header ###
 # AA AA == ID(16)
 # 01 == Qr(1), Opcode(4), Aa(1), Tc(1), Rd(1)
