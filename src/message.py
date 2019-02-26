@@ -386,3 +386,34 @@ def bytesToMessage(b):
         rrList.append(rr)
 
     return Message(header, qList, rrList)
+
+def readTXT(txt):
+    result=b''
+    i = 0
+
+    try:
+        while(i < len(txt)):
+            length = txt[i]
+            i += 1
+            if(i+length > len(txt)):
+                print("Error while decoding txt record")
+            result += txt[i:i+length]
+            i += length
+    except:
+        print("Error while decoding txt record")
+        
+    return result
+
+
+def writeTXT(txt):
+    result = b''
+    i=0
+    lentxt = len(txt)
+
+    while(i < lentxt):
+        l = min(255,lentxt - i)
+        result += l.to_bytes(1,'big')
+        result += txt[i:i+l]
+        i+=l
+
+    return result
