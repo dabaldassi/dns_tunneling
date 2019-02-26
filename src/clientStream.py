@@ -1,9 +1,14 @@
 #!/usr/bin/python3
 
+from threading import Thread
+import sys
+import os
 import signal
 import socket
 import time
 from message import *
+from stream import *
+import time
 
 interruption = False
 
@@ -97,7 +102,23 @@ def main(inet="127.0.0.1"):
                 salt += 1
 
 if __name__ == "__main__":
-    main("192.168..99.1")
+    #main()
+    s = Stream()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    ad = ("192.168.0.12",8888)
+    
+    sock.connect(ad)
+   
+    while(True):
+        
+        data = s.read()
+        sock.send(data)
+        
+        data = sock.recv(4096)
+
+        if(data != b'nothing'):
+            sys.stdout.buffer.write(data)
+            sys.stdout.flush()
             
 ### Header ###
 # AA AA == ID(16)

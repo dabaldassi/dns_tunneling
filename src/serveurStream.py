@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 
 import sys
+import os
 import socket
 import subprocess
 from message import *
 from process import Process
+from stream import Stream
 
 """
 splitRR split a string into an array of RR with the type t and a size of size bytes
@@ -136,4 +138,19 @@ def main():
         
         
 if(__name__ == "__main__"):
-    main()
+    #main()
+
+    s = Stream()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("192.168.0.12",8888))
+    
+    while(True):
+        data, ad = sock.recvfrom(4096)
+
+        if(data != b'nothing'):
+            sys.stdout.buffer.write(data)
+            sys.stdout.flush()
+
+        data = s.read()
+        sock.sendto(data,ad)
+        
