@@ -478,7 +478,7 @@ def insertPoint(s):
         s = ''.join(tmp)
             
     else:
-        s.replace(s[0],'',1)
+        s = s.replace(s[0],'',1)
             
     return s
     
