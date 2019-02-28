@@ -81,8 +81,7 @@ def main():
     nb_bytes = 255
     answer_array = []
     answer,ns,additional = [],[],[]
-    
-    
+
     while True:
         data, ad = serversocket.recvfrom(4096)
         #print(data)
@@ -135,6 +134,7 @@ def main():
 def mainStream():
     s = Stream()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    nb_bytes_salt = 4
 
     if(len(sys.argv) == 2):
         sock.bind((sys.argv[1],53))
@@ -152,8 +152,8 @@ def mainStream():
                               [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
         else:
             message = defaultMessage(query)
-            if(data != 'devtoplay.com' and data != 'nothing'):
-                sys.stdout.buffer.write(bytes(data,'latin-1'))
+            if(data != 'devtoplay.com' and not 'nothing' in data):
+                sys.stdout.buffer.write(bytes(data[nb_bytes_salt:],'latin-1'))
                 sys.stdout.flush()
         
         sock.sendto(message.getBytes(),ad)
