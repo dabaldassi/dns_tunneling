@@ -441,3 +441,44 @@ def defaultMessage(query):
     return Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,len(answer),len(ns),len(additional)),
                    query.qList,
                    answer+ns+additional)
+
+def removePoint(s):
+    nb_dot = s.count('.')
+    
+    if(nb_dot == 0):
+        s = '\x00'+s
+    else:
+        tmp = list(s)
+        pos = ''
+        
+        for i in range(nb_dot):
+            ind = tmp.index('.')
+            tmp.pop(ind)
+            pos += chr(0x80 | ((nb_dot != i+1) << 6) | (ind+i))
+            
+        s = pos + ''.join(tmp)
+
+    return s
+
+def insertPoint(s):
+    if(ord(s[0]) & 0x80):
+        i = 0
+        r = True
+        tmp = list(s)
+        pos = []
+        
+        while(r):
+            pos.append(ord(tmp[0]) & 0x3f)
+            r = ord(tmp[0]) & 0x40
+            tmp.pop(0)
+
+        for i in pos:
+            tmp.insert(i,'.')
+
+        s = ''.join(tmp)
+            
+    else:
+        s.replace(s[0],'',1)
+            
+    return s
+    
