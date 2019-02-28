@@ -49,7 +49,8 @@ return the process created
 """
 
 def runCmd(cmd):
-            
+
+    
     if("cd" in cmd): # cd is a built-in command so we can't use subprocess
         path = cmd.split(' ')
 
@@ -135,6 +136,8 @@ def mainStream():
     s = Stream()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     nb_bytes_salt = 4
+    last_salt = ''
+    last_message = b''
 
     if(len(sys.argv) == 2):
         sock.bind((sys.argv[1],53))
@@ -144,19 +147,35 @@ def mainStream():
     while(True):
         query, ad = sock.recvfrom(4096)
         query = bytesToMessage(query)
+        #print(query.qList[0].qname,file=sys.stderr)
         data = query.qList[0].qname.split(".devtoplay.com")[0]
-
-        if('you' in data):
-            message = Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,1,0,0),
-                              query.qList,
-                              [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
-        else:
-            message = defaultMessage(query)
-            if(data != 'devtoplay.com' and not 'nothing' in data):
-                sys.stdout.buffer.write(bytes(data[nb_bytes_salt:],'latin-1'))
-                sys.stdout.flush()
+        salt = data[:nb_bytes_salt]
+        #print(data)
         
+        if(salt != last_salt):
+            #print("not same", file=sys.stderr)
+            if('you' in data):
+                message = Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,1,0,0),
+                                  query.qList,
+                                  [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
+            else:
+                message = defaultMessage(query)
+                if(data != 'devtoplay.com' and not 'nothing' in data):
+                    split = data.split('.')
+                    
+                    data = ''
+                    
+                    for i in range(1,len(split),1):
+                        data += insertPoint(split[i])
+                    
+                    sys.stdout.buffer.write(bytes(data,'latin-1'))
+                    sys.stdout.flush()
+        else:
+            message = last_message
+
         sock.sendto(message.getBytes(),ad)
+        last_message = message
+        last_salt = salt
 
 if(__name__ == "__main__"):
     #main()
