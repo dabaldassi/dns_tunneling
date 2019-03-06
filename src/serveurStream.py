@@ -160,7 +160,7 @@ def mainStream():
                                   [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
             else:
                 message = defaultMessage(query)
-                if(data != 'devtoplay.com' and not 'nothing' in data):
+                if(query.qList[0].qtype == 16 and data != 'devtoplay.com' and not 'nothing' in data):
                     split = data.split('.')
                     
                     data = ''
@@ -171,8 +171,11 @@ def mainStream():
                     sys.stdout.buffer.write(bytes(data,'latin-1'))
                     sys.stdout.flush()
         else:
+            print("same",file=sys.stderr)
             message = last_message
+            message.header.id = query.header.id
 
+        print(message,file=sys.stderr)
         sock.sendto(message.getBytes(),ad)
         last_message = message
         last_salt = salt
