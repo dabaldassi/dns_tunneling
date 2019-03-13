@@ -8,7 +8,7 @@ from process import Process
 
 """
 splitRR split a string into an array of RR with the type t and a size of size bytes
-and the ending sequence of our protocol (0000)
+and the ending sequence of our protocol
 """
 
 def splitRR(string,t,size):
@@ -18,7 +18,7 @@ def splitRR(string,t,size):
     for i in range(0,len(string),size): # Split into 255 char string
         s = string[i:i+size]
         
-        if(s[len(s)-1:] == b'\x00'):
+        if(s[len(s)-1:] == b'\x00'): # If there is an ending sequence create a caracter string with '\x00'
             s2 = (len(s) - 1).to_bytes(1,'big')
         else:
             s2 = len(s).to_bytes(1,'big') # Add the length of the string at the begining
@@ -78,19 +78,13 @@ def main():
     nb_bytes = 255
     answer_array = []
     answer,ns,additional = [],[],[]
-    # default_RR = { 1:(RR("",b'\x01\x01\x01\x01',1,1,1),
-    #                   [],
-    #                   [])
-    #                2:(RR("",b'\x01\x01\x01\x01',1,1,1),
-    #                   RR("",b'salut.devtoplay.com',2,1,1),
-    #                   RR("salut.devtoplay.com",b'\x02\x02\x02\x02',1,1,1)
     
     while True:
         data, ad = serversocket.recvfrom(4096)
         #print(data)
         q = bytesToMessage(data)
 
-        cmd = q.qList[0].qname.split(".")
+        cmd = q.qList[0].qname.split(".") # Split each label
         
         if(cmd[0] != "devtoplay" and q.qList[0].qtype == type_RR):
             if(last != cmd[0] and p is None and len(answer_array) == 0):
@@ -126,7 +120,7 @@ def main():
 	    [Question(q.qList[0].qname,q.qList[0].qtype)],
 	    answer+ns+additional)
 
-        last = cmd[0]
+        last = cmd[0] # Keep the last cmd in case we have the same request just afterward.
 
         #print(message)
         #print(message.getBytes())
