@@ -5,10 +5,41 @@ def encodeName(name):
     for d in domainList:
         encodedName += len(d).to_bytes(1, 'big')
         for letter in d:
-            encodedName += bytes(letter, 'ascii')
-    encodedName += (0).to_bytes(1, 'big')
+            encodedName += bytes(letter, 'latin-1')
+    encodedName += b'\x00'
 
     return encodedName
+
+
+def encode_compressed_name(name, previous_names, begin):
+    encoded_name = b''
+    split_name = name
+    i = begin
+    to_encode = []
+
+    while split_name != '' and split_name not in previous_names:
+        tmp, sep, split_name = split_name.partition('.')
+        to_encode.append([tmp,i])
+        encoded_name += len(to_encode[-1][0]).to_bytes(1, 'big')
+        i += 1
+        for letter in to_encode[-1][0]:
+            encoded_name += bytes(letter, 'latin-1')
+            i += 1
+        for k in range(len(to_encode) - 1):
+            to_encode[k][0] += '.' + to_encode[-1][0]
+
+    if split_name != '':
+        encoded_name += previous_names[split_name]
+        i += 2
+        for (ns, index) in to_encode:
+            previous_names[ns + '.' + split_name] = (49152 + index).to_bytes(2, 'big')
+    else:
+        encoded_name += b'\x00'
+        i += 1
+        for (ns, index) in to_encode:
+            previous_names[ns] = (49152 + index).to_bytes(2, 'big')
+
+    return encoded_name, i
 
 
 def decodeName(b, begin):
@@ -19,14 +50,14 @@ def decodeName(b, begin):
     while b[i:i + 1].hex() != '00' and int(b[i:i + 1].hex(), 16) < 192:
         length = int(b[i:i + 1].hex(), 16)
         for j in range(length):
-            name += str(b[i + 1 + j:i + 2 + j], 'ascii')
+            name += str(b[i + 1 + j:i + 2 + j], 'latin-1')
         nameLength += length + 1
         i += length + 1
         if b[i:i + 1].hex() != '00':
             name += '.'
 
     if int(b[i:i + 1].hex(), 16) >= 192:
-        name += decodeName(b, ((int(b[i:i + 1].hex(), 16) - 192) << 7) + int(b[i + 1:i + 2].hex(), 16))[0]
+        name += decodeName(b, int(b[i:i+2].hex(), 16) - 49152)[0]
         nameLength += 1
 
     return name, nameLength + 1
@@ -224,11 +255,37 @@ class Message:
         self.rrList = rrList
 
     def getBytes(self):
+        previous_names = {}
         msg = self.header.getBytes()
+        i = 12
         for q in self.qList:
-            msg += q.getBytes()
+            tmp, i = encode_compressed_name(q.qname, previous_names, i)
+            msg += tmp
+            msg += q.qtype.to_bytes(2, 'big')
+            msg += q.qclass.to_bytes(2, 'big')
+            i += 4
         for rr in self.rrList:
-            msg += rr.getBytes()
+            tmp, i = encode_compressed_name(rr.name, previous_names, i)
+            msg += tmp
+            msg += rr.type_data.to_bytes(2, 'big')
+            msg += rr.classe.to_bytes(2, 'big')
+            msg += rr.ttl.to_bytes(4, 'big')
+            i += 10
+            if rr.type_data == 2:
+                tmp, i2 = encode_compressed_name(rr.rdata, previous_names, i)
+                msg += (i2-i).to_bytes(2, 'big')
+                msg += tmp
+                i = i2
+            elif rr.type_data == 15:
+                tmp, i2 = encode_compressed_name(rr.rdata, previous_names, i + 2)
+                msg += (i2-i).to_bytes(2, 'big')
+                msg += b'\x00\x01'
+                msg += tmp
+                i = i2
+            else:
+                msg += len(rr.rdata).to_bytes(2, 'big')
+                msg += rr.rdata
+                i += len(rr.rdata)
 
         return msg
 
@@ -329,3 +386,99 @@ def bytesToMessage(b):
         rrList.append(rr)
 
     return Message(header, qList, rrList)
+
+def readTXT(txt):
+    result=b''
+    i = 0
+
+    try:
+        while(i < len(txt)):
+            length = txt[i]
+            i += 1
+            if(i+length > len(txt)):
+                print("Error while decoding txt record")
+            result += txt[i:i+length]
+            i += length
+    except:
+        print("Error while decoding txt record")
+        
+    return result
+
+
+def writeTXT(txt):
+    result = b''
+    i=0
+    lentxt = len(txt)
+
+    while(i < lentxt):
+        l = min(255,lentxt - i)
+        result += l.to_bytes(1,'big')
+        result += txt[i:i+l]
+        i+=l
+
+    return result
+
+def defaultMessage(query):
+    name = query.qList[0].qname
+    default_RR = { 1:([RR(name,b'\x01'*4,1,1,1)],
+                      [],
+                      []),
+                   2:([RR(name,b'\x01'*4,1,1,1)],
+                      [RR(name,b'salut.devtoplay.com',2,1,1)],
+                      [RR("salut.devtoplay.com",b'\x02'*4,1,1,1)]),
+                   16:([RR(name,writeTXT(b'ACK'),16,1,1)],
+                       [],
+                       []),
+                   28:([RR(name,b'\x01'*16,28,1,1)],
+                       [],
+                       []) }
+
+    try:
+        answer,ns,additional = default_RR[query.qList[0].qtype]
+    except:
+        answer,ns,additional = default_RR[1]
+
+    return Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,len(answer),len(ns),len(additional)),
+                   query.qList,
+                   answer+ns+additional)
+
+def removePoint(s):
+    nb_dot = s.count('.')
+    
+    if(nb_dot == 0):
+        s = '\x00'+s
+    else:
+        tmp = list(s)
+        pos = ''
+        
+        for i in range(nb_dot):
+            ind = tmp.index('.')
+            tmp.pop(ind)
+            pos += chr(0x80 | ((nb_dot != i+1) << 6) | (ind+i))
+            
+        s = pos + ''.join(tmp)
+
+    return s
+
+def insertPoint(s):
+    if(ord(s[0]) & 0x80):
+        i = 0
+        r = True
+        tmp = list(s)
+        pos = []
+        
+        while(r):
+            pos.append(ord(tmp[0]) & 0x3f)
+            r = ord(tmp[0]) & 0x40
+            tmp.pop(0)
+
+        for i in pos:
+            tmp.insert(i,'.')
+
+        s = ''.join(tmp)
+            
+    else:
+        s = s.replace(s[0],'',1)
+            
+    return s
+    

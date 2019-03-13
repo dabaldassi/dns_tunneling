@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 
+import time
 import sys
+import os
 import socket
 import subprocess
 from message import *
 from process import Process
+from stream import Stream
 
 """
 splitRR split a string into an array of RR with the type t and a size of size bytes
@@ -46,7 +49,8 @@ return the process created
 """
 
 def runCmd(cmd):
-            
+
+    
     if("cd" in cmd): # cd is a built-in command so we can't use subprocess
         path = cmd.split(' ')
 
@@ -78,13 +82,7 @@ def main():
     nb_bytes = 255
     answer_array = []
     answer,ns,additional = [],[],[]
-    # default_RR = { 1:(RR("",b'\x01\x01\x01\x01',1,1,1),
-    #                   [],
-    #                   [])
-    #                2:(RR("",b'\x01\x01\x01\x01',1,1,1),
-    #                   RR("",b'salut.devtoplay.com',2,1,1),
-    #                   RR("salut.devtoplay.com",b'\x02\x02\x02\x02',1,1,1)
-    
+
     while True:
         data, ad = serversocket.recvfrom(4096)
         #print(data)
@@ -133,7 +131,57 @@ def main():
 
         serversocket.sendto(message.getBytes(), ad)
         print("end")
+
+def mainStream():
+    s = Stream()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    nb_bytes_salt = 4
+    last_salt = ''
+    last_message = b''
+
+    if(len(sys.argv) == 2):
+        sock.bind((sys.argv[1],53))
+    else:
+        sock.bind(("127.0.0.1",53))
+    
+    while(True):
+        query, ad = sock.recvfrom(4096)
+        query = bytesToMessage(query)
+        #print(query.qList[0].qname,file=sys.stderr)
+        data = query.qList[0].qname.split(".devtoplay.com")[0]
+        salt = data[:nb_bytes_salt]
+        #print(data)
         
-        
+        if(salt != last_salt):
+            #print("not same", file=sys.stderr)
+            if('you' in data):
+                message = Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,1,0,0),
+                                  query.qList,
+                                  [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
+            else:
+                message = defaultMessage(query)
+                if(query.qList[0].qtype == 16 and data != 'devtoplay.com' and not 'nothing' in data):
+                    split = data.split('.')
+                    
+                    data = ''
+                    
+                    for i in range(1,len(split),1):
+                        data += insertPoint(split[i])
+                    
+                    sys.stdout.buffer.write(bytes(data,'latin-1'))
+                    sys.stdout.flush()
+        else:
+            print("same",file=sys.stderr)
+            message = last_message
+            message.header.id = query.header.id
+
+        print(message,file=sys.stderr)
+        sock.sendto(message.getBytes(),ad)
+        last_message = message
+        last_salt = salt
+
 if(__name__ == "__main__"):
-    main()
+    #main()
+    mainStream()
+    
+        

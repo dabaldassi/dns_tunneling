@@ -1,9 +1,14 @@
 #!/usr/bin/python3
 
+from threading import Thread
+import sys
+import os
 import signal
 import socket
 import time
 from message import *
+from stream import *
+import time
 
 interruption = False
 
@@ -24,7 +29,7 @@ def send_udp_message(message, sock, server_address):
         while not("devtoplay.com" in message.qList[0].qname):
             data, _ = sock.recvfrom(4096)
             message = bytesToMessage(data)
-        print(message)
+        #print(message)
     finally:
         return message
 
@@ -96,9 +101,71 @@ def main(inet="127.0.0.1"):
                 send_udp_message(message, sock, server_address)
                 salt += 1
 
-if __name__ == "__main__":
-    main("192.168..99.1")
+def next_salt(salt):
+    mask_salt = 0xffffffff
+    nb_bytes_salt = mask_salt.bit_length() >> 3
+
+    while(True):
+        salt[0] = (salt[0] + 1) & mask_salt
+        saltstring = str(salt[0].to_bytes(nb_bytes_salt,'big'),'latin-1')
+
+        if(not '.' in saltstring):
+            break
+
+    return saltstring
+
+def dataToLabel(data):
+    size = 62
+    result = ''
+
+    data = str(data,'latin-1')
+
+    for i in range(0,len(data),size):
+        result += removePoint(data[i:i+size])
+        result += '.'
+
+    return result
+        
+def mainStream(inet="127.0.0.1"):
+    s = Stream()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = (inet,53)
+    header = Header('aaaa', 0, 0)
+    salt = [0]
+    qtype = 16
+    
+    while(True):
+        data = s.read()
+        
+        if(len(data) <= 250):
+            #print(data,file=sys.stderr)
+                        
+            question = [Question(next_salt(salt)+'.'+dataToLabel(data)+'devtoplay.com',qtype)]
+            message = Message(header,question)
+            #print(len(message.getBytes()),file=sys.stderr)
+            receipt = send_udp_message(message,sock,server_address)
+            print(receipt.header.rcode)
+            message = Message(header, [Question(next_salt(salt)+"you.devtoplay.com", qtype)])
+            receipt = send_udp_message(message,sock,server_address)
             
+            for answer in receipt.getAnswer():
+                if(answer.type_data == qtype):
+                    data = readTXT(answer.rdata)
+                                
+                    if(data != b'nothing'):
+                        sys.stdout.buffer.write(data)
+                        sys.stdout.flush()
+
+if __name__ == "__main__":
+    #main()
+    #mainStream("91.121.145.188") # Celforyon
+    #mainStream("192.168.0.12") # Brutal PC
+   # mainStream("192.168.0.254") # Ma box
+    #mainStream("172.27.141.254") # Eduspot
+    #mainStream("192.168.99.1") # Muscibot
+    mainStream("192.168.43.1") # CAFEBABE
+
+    
 ### Header ###
 # AA AA == ID(16)
 # 01 == Qr(1), Opcode(4), Aa(1), Tc(1), Rd(1)
