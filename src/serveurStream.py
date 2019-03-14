@@ -138,6 +138,8 @@ def mainStream():
     nb_bytes_salt = 4
     last_salt = ''
     last_message = b''
+    packet = ''
+    size = 300
 
     if(len(sys.argv) == 2):
         sock.bind((sys.argv[1],53))
@@ -150,16 +152,20 @@ def mainStream():
         data = query.qList[0].qname.split(".devtoplay.com")[0]
         salt = data[:nb_bytes_salt]
         answer = []
-        packet = b''
-        
+
         if(salt != last_salt):
             if('you' in data):
+                if(len(packet) > 0):
+                    sys.stdout.buffer.write(bytes(packet,'latin-1'))
+                    sys.stdout.flush()
+                    packet=''
+                
                 if(len(answer) == 0):
                     d = s.read()
-                    answer = [d[i:i+size] for i in range(0,len(answer),size)]
-                    if(answer[0] != b'nothing'):
+                    answer = [d[i:i+size] for i in range(0,len(d),size)]
+                    if(len(answer) == 0 or answer[0] != b'nothing'):
                         answer.append(b'nothing')
-                
+
                 message = Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,1,0,0),
                                   query.qList,
                                   [RR(query.qList[0].qname,writeTXT(answer.pop(0)),16,1,1)])
