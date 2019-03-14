@@ -147,35 +147,40 @@ def mainStream():
     while(True):
         query, ad = sock.recvfrom(4096)
         query = bytesToMessage(query)
-        #print(query.qList[0].qname,file=sys.stderr)
         data = query.qList[0].qname.split(".devtoplay.com")[0]
         salt = data[:nb_bytes_salt]
-        #print(data)
+        answer = []
+        packet = b''
         
         if(salt != last_salt):
-            #print("not same", file=sys.stderr)
             if('you' in data):
+                if(len(answer) == 0):
+                    d = s.read()
+                    answer = [d[i:i+size] for i in range(0,len(answer),size)]
+                    if(answer[0] != b'nothing'):
+                        answer.append(b'nothing')
+                
                 message = Message(Header(query.header.id,1,0,False,False,True,True,0,0,1,1,0,0),
                                   query.qList,
-                                  [RR(query.qList[0].qname,writeTXT(s.read()),16,1,1)])
+                                  [RR(query.qList[0].qname,writeTXT(answer.pop(0)),16,1,1)])
             else:
                 message = defaultMessage(query)
-                if(query.qList[0].qtype == 16 and data != 'devtoplay.com' and not 'nothing' in data):
-                    split = data.split('.')
+                if(query.qList[0].qtype == 16 and data != 'devtoplay.com'):
+                    if(nothing in data):
+                        sys.stdout.buffer.write(bytes(packet,'latin-1'))
+                        sys.stdout.flush()
+                        packet = b''
+                    else:
+                        split = data.split('.')
+                        data = ''
                     
-                    data = ''
-                    
-                    for i in range(1,len(split),1):
-                        data += insertPoint(split[i])
-                    
-                    sys.stdout.buffer.write(bytes(data,'latin-1'))
-                    sys.stdout.flush()
+                        for i in range(1,len(split),1):
+                            data += insertPoint(split[i])
+                        packet += data
         else:
-            print("same",file=sys.stderr)
             message = last_message
             message.header.id = query.header.id
 
-        print(message,file=sys.stderr)
         sock.sendto(message.getBytes(),ad)
         last_message = message
         last_salt = salt
