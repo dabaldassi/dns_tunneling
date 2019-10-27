@@ -164,12 +164,7 @@ def mainStream(inet="127.0.0.1"):
 
 if __name__ == "__main__":
     #main()
-    mainStream("91.121.145.188") # Celforyon
-    #mainStream("192.168.0.12") # Brutal PC
-   # mainStream("192.168.0.254") # Ma box
-    #mainStream("172.27.141.254") # Eduspot
-    #mainStream("192.168.99.1") # Muscibot
-    #mainStream("192.168.43.1") # CAFEBABE
+    mainStream("91.121.145.188")
 
     
 ### Header ###

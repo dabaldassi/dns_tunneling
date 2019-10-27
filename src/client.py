@@ -97,7 +97,7 @@ def main(inet="127.0.0.1"):
                 salt += 1
 
 if __name__ == "__main__":
-    main("192.168..99.1")
+    main("192.168.99.1")
             
 ### Header ###
 # AA AA == ID(16)
